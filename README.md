@@ -48,6 +48,6 @@ The client is used to send position and velocity commands to the drones via the 
 
 This sample code commands the E8 drone to follow in a pre-defined square trajectory, while the E7 drone will follow the drone solely based on the information given by the Odometry topic.
 
-![flight trajectory](Resources/IMG_2535.mov)
+![flight trajectory](CodeBase_5.28.25/Output/IMG_2535.mov)
 
-![flight trajectory](Resources/demo5.28.25.png)
+![flight trajectory](CodeBase_5.28.25/Output/flight_trajectory.png)
