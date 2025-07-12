@@ -50,69 +50,16 @@ class server:
                 self.history[cf][data_len - 1, :] = self.data[cf]
 
 
-    @threaded
-    def live_2Dplot(self,blit=False):
-        fig = plt.figure(figsize=(5, 5))
-        ax = fig.add_subplot(1, 1, 1)
-
-        data_all = {}
-        for cf in self.cf_list:
-            data_all[cf], = ax.plot([],[], 'g.', lw=3)
-
-
-        ax.set_xlabel('X')
-        ax.set_xlabel('Y')
-
-        fig.canvas.draw()  # note that the first draw comes before setting data
-
-        if blit:
-            # cache the background
-            axbackground = fig.canvas.copy_from_bbox(ax.bbox)
-
-        plt.show(block=False)
-
-        # for i in np.arange(10000):
-        while (True):
-            time.sleep(0.01)
-            self.time_list[0:data_len - 1] = self.time_list[1:data_len]
-            self.time_list[data_len - 1] = time.time() - self.t0
-            print(self.time_list)
-            ax.set_xlim([self.time_list[0], self.time_list[data_len-1]])
-            ax.set_ylim([-10, 10])
-            x_vel = {}
-            for cf in self.cf_list:
-                x_vel[cf] = self.history[cf][:, 0]
-                data_all[cf].set_data(self.time_list, x_vel[cf])
-
-
-
-            if blit:
-                # restore background
-                fig.canvas.restore_region(axbackground)
-
-                # redraw just the points
-                # ax1.draw_artist(line1)
-
-                # coords = plt.ginput(5)
-                # fill in the axes rectangle
-                fig.canvas.blit(ax.bbox)
-
-
-            else:
-
-                fig.canvas.draw()
-
-            fig.canvas.flush_events()
 
 
     @threaded
-    def live_3Dplot(self, blit=False):
+    def live_plot(self, blit=False):
 
         fig = plt.figure(figsize=(5, 5))
         ax1 = fig.add_subplot(111, projection='3d')
 
         fig = plt.figure(figsize=(5, 5))
-        ax = fig.add_subplot(1, 1, 1)
+        ax = fig.add_subplot(2, 1, 1)
 
         vel_all = {}
         pos_data_all = {}
