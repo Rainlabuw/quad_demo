@@ -18,7 +18,7 @@ def threaded(fn):
     return wrapper
 
 
-data_len = 20
+data_len = 50
 
 
 class server:
@@ -33,7 +33,8 @@ class server:
         self.time_list = np.zeros(data_len)
         self.fake_gen()
         self.live_3Dplot()
-
+        # self.live_2Dplot()
+        plt.ion()
     @threaded
     def fake_gen(self):
         while (True):
@@ -41,9 +42,68 @@ class server:
             t_elp = time.time() - self.t0
             # print(t_elp)
             for cf in self.cf_list:
-                self.data[cf] = np.array([np.sin(t_elp), np.cos(t_elp), np.sin(t_elp), 10 * np.cos(t_elp), 1, 2])
+                if cf == "cf1":
+                    self.data[cf] = np.array([np.sin(t_elp), np.cos(t_elp), np.sin(t_elp), 10 * np.cos(t_elp), 1, 2])
+                else:
+                    self.data[cf] = np.array([0*np.sin(t_elp), np.cos(t_elp), np.sin(t_elp), 10 * np.cos(t_elp), 1, 2])
                 self.history[cf][0:data_len - 1] = self.history[cf][1:data_len]
                 self.history[cf][data_len - 1, :] = self.data[cf]
+
+
+    @threaded
+    def live_2Dplot(self,blit=False):
+        fig = plt.figure(figsize=(5, 5))
+        ax = fig.add_subplot(1, 1, 1)
+
+        data_all = {}
+        for cf in self.cf_list:
+            data_all[cf], = ax.plot([],[], 'g.', lw=3)
+
+
+        ax.set_xlabel('X')
+        ax.set_xlabel('Y')
+
+        fig.canvas.draw()  # note that the first draw comes before setting data
+
+        if blit:
+            # cache the background
+            axbackground = fig.canvas.copy_from_bbox(ax.bbox)
+
+        plt.show(block=False)
+
+        # for i in np.arange(10000):
+        while (True):
+            time.sleep(0.01)
+            self.time_list[0:data_len - 1] = self.time_list[1:data_len]
+            self.time_list[data_len - 1] = time.time() - self.t0
+            print(self.time_list)
+            ax.set_xlim([self.time_list[0], self.time_list[data_len-1]])
+            ax.set_ylim([-10, 10])
+            x_vel = {}
+            for cf in self.cf_list:
+                x_vel[cf] = self.history[cf][:, 0]
+                data_all[cf].set_data(self.time_list, x_vel[cf])
+
+
+
+            if blit:
+                # restore background
+                fig.canvas.restore_region(axbackground)
+
+                # redraw just the points
+                # ax1.draw_artist(line1)
+
+                # coords = plt.ginput(5)
+                # fill in the axes rectangle
+                fig.canvas.blit(ax.bbox)
+
+
+            else:
+
+                fig.canvas.draw()
+
+            fig.canvas.flush_events()
+
 
     @threaded
     def live_3Dplot(self, blit=False):
@@ -51,14 +111,17 @@ class server:
         fig = plt.figure(figsize=(5, 5))
         ax1 = fig.add_subplot(111, projection='3d')
 
+        fig = plt.figure(figsize=(5, 5))
+        ax = fig.add_subplot(1, 1, 1)
 
+        vel_all = {}
         pos_data_all = {}
         for cf in self.cf_list:
             pos_data_all[cf],  = ax1.plot([], [], [], 'g.', lw=3)
+            vel_all[cf], = ax.plot([], [], 'g.', lw=3)
 
-
-        ax1.set_xlim([-800, 1500])
-        ax1.set_ylim([-800, 1500])
+        # ax1.set_xlim([-800, 1500])
+        # ax1.set_ylim([-800, 1500])
         ax1.set_xlabel('X')
         ax1.set_xlabel('Y')
 
@@ -76,19 +139,25 @@ class server:
             self.time_list[0:data_len - 1] = self.time_list[1:data_len]
             self.time_list[data_len - 1] = time.time() - self.t0
             print(self.time_list)
+            ax.set_xlim([self.time_list[0], self.time_list[data_len-1]])
+            ax.set_ylim([-10, 10])
+
+
 
             x_traj = {}
             y_traj = {}
             z_traj = {}
+            x_vel = {}
             for cf in self.cf_list:
                 x_traj[cf] = self.history[cf][:, 0]
                 y_traj[cf] = self.history[cf][:, 1]
                 z_traj[cf] = self.history[cf][:, 2]
                 pos_data_all[cf].set_data(x_traj[cf], y_traj[cf])
                 pos_data_all[cf].set_3d_properties(z_traj[cf])
-            x = np.array([1, 2])
-            y = np.array([1, 2])
-            z = np.array([1, 2])
+
+                x_vel[cf] = self.history[cf][:, 0]
+                vel_all[cf].set_data(self.time_list, x_vel[cf])
+
 
             # line1.set_data(x, y)
             # line1.set_3d_properties(z)
