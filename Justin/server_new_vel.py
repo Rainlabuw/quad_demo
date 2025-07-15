@@ -57,6 +57,7 @@ class CrazyflieServer:
         for cf in self.crazyflies:
             self.cf_list.append(cf.object_name)
         self.mover = {}
+        self.mover_history = {}
         self.hover = {}
         self.hover_flag = {}
         ## initialize the data
@@ -168,6 +169,7 @@ class CrazyflieServer:
         for cf in self.cf_list:
             self.mover[cf] = np.zeros(m)
             self.mover[cf][-1] = 1.0  ## scaler quaternion
+            self.mover_history[cf] = np.zeros((data_length, m))
             self.hover[cf] = np.zeros(3)
             self.hover_flag[cf] = False
             self.data_history[cf] = np.zeros((data_length, 13))
@@ -188,7 +190,7 @@ class CrazyflieServer:
         kd = 0.0
         v_max = 0.5
         v_des = kp * self.error_history[name][-1] + kd * (
-                    self.error_history[name][-1] - self.error_history[name][-2]) / 0.02
+                self.error_history[name][-1] - self.error_history[name][-2]) / 0.02
         for i in range(len(v_des)):
             if v_des[i] >= v_max:
                 v_des[i] = v_max
@@ -197,6 +199,28 @@ class CrazyflieServer:
 
         cf.cf.commander.send_velocity_world_setpoint(v_des[0], v_des[1], v_des[2], 0)
         return v_des
+
+    @threaded
+    def box_constratins(self, mover_i):
+        x_max = 1
+        x_min = -1
+        y_max = 1
+        y_min = -1
+        z_max = 1.5
+        z_min = 0
+        if mover_i[0] >= x_max:
+            mover_i[0] = x_max
+        elif mover_i[0] <= x_min:
+            mover_i[0] = x_min
+        if mover_i[1] >= y_max:
+            mover_i[1] = y_max
+        elif mover_i[1] <= y_min:
+            mover_i[1] = y_min
+        if mover_i[2] >= z_max:
+            mover_i[2] = z_max
+        elif mover_i[2] <= z_min:
+            mover_i[2] = z_min
+        return mover_i
 
     ## the command is the position and yaw
     @threaded
@@ -225,16 +249,22 @@ class CrazyflieServer:
             time.sleep(0.02)
             current_pos = self.current()
             for cf in self.crazyflies:
+                self.mover_history[cf.object_name][0:data_length - 1] = self.mover_history[cf.object_name][
+                                                                        1:data_length]
+                self.mover_history[cf.object_name][-1] = self.mover[cf.object_name]
                 current_pos_i = current_pos["vicon-" + cf.object_name][1:4]
-                mover_i = self.mover[cf.object_name]
-                pos_i = mover_i[0:3]  ## the command position
-                euler_i = self.q2e(mover_i[3:7])
+                self.mover[cf.object_name] = self.box_constratins(self.mover[cf.object_name])
+                euler_i = self.q2e(self.mover[cf.object_name][3:7])
                 yaw_i = euler_i[-1]
                 yaw_i = 0  ## set to 0 for test
-                if mover_i[2] == 0:  ## Hover (no cmd received or computing)
+                if self.mover[cf.object_name][2] == 0:  ## Hover (no cmd received or computing)
                     ## in optimization code, send zeros when computing to enable hover
-                    self.hover_flag[cf.object_name] = True
-                    self.hover[cf.object_name] = current_pos_i
+
+                    if self.hover_flag[cf.object_name] == False:
+                        self.hover[cf.object_name] = self.mover_history[cf.object_name][-2]
+                        ## store the second last wps as hover point
+
+                    self.hover_flag[cf.object_name] = True  ## enter hover mode
                     vel_des = self.vel_controller(cf)
                     self.data_history[cf.object_name][-1, 10:13] = vel_des
                     # print("vel_cmd: ",vel)
