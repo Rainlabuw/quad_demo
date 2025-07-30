@@ -40,7 +40,7 @@ class TrackingObject:
 class CrazyflieServer:
 
     def __init__(self, crazyflies=[], vicon_ip="", kill_sleep=20):
-        self.duration = 120.0
+        self.duration = 1200.0
         self.save_flag = True
         self.print_t = 50.0
         self.lock = threading.Lock()
@@ -179,14 +179,18 @@ class CrazyflieServer:
     def vel_controller(self, cf):
         name = cf.object_name
         pos_history = self.data_history[name][:, 0:3]
+        # print(pos_history[-1])
         if self.hover_flag[name] == True:
-            wps = self.hover[name]
+            # wps = self.hover[name]
+            wps = np.array([0.0,0.0,0.5])
+            # print("Hovering")
         else:
             wps = self.mover[name][0:3]
+            # print("Normal flight, wps:  ",wps)
         ## update the error data
         self.error_history[name][0:data_length - 1] = self.error_history[name][1:data_length]
         self.error_history[name][-1,0:3] = wps - pos_history[-1]
-        kp = 0.4
+        kp = 0.7
         kd = 0.0
         v_max = 0.5
         v_des = kp * self.error_history[name][-1,0:3] + kd * (
@@ -196,7 +200,6 @@ class CrazyflieServer:
                 v_des[i] = v_max
             elif v_des[i] <= -v_max:
                 v_des[i] = -v_max
-
         cf.cf.commander.send_velocity_world_setpoint(v_des[0], v_des[1], v_des[2], 0)
         # print("cmd_vel: ",name,v_des)
         return v_des
@@ -206,9 +209,9 @@ class CrazyflieServer:
         x_max = 1
         x_min = -1
         y_max = 1
-        y_min = -1
+        y_min = -0.1
         z_max = 1.5
-        z_min = 0
+        z_min = 0.1
         if mover_i[0] >= x_max:
             mover_i[0] = x_max
         elif mover_i[0] <= x_min:
@@ -256,6 +259,7 @@ class CrazyflieServer:
                 current_pos_i = current_pos["vicon-" + cf.object_name][1:4]
                 self.data_history[cf.object_name][-1,0:3] = current_pos_i
                 self.mover[cf.object_name] = self.box_constratins(self.mover[cf.object_name])
+                print(self.mover[cf.object_name])
                 q_i = self.mover[cf.object_name][3:7]
                 euler_i = self.q2e(q_i)
                 yaw_i = euler_i[-1]
