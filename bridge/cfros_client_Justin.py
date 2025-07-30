@@ -42,8 +42,8 @@ class client_node(Node):
         q = msg.pose.pose.orientation
         self.Client.state[cf] = np.array([pos.x,pos.y,pos.z])
         self.sub_count += 1
-        if self.sub_count % 10 == 0:
-            self.get_logger().info(f"Recieved cmd for {cf}, (x,y,z,q) = ({pos,q})")
+        # if self.sub_count % 10 == 0:
+        #     self.get_logger().info(f"Recieved cmd for {cf}, (x,y,z,q) = ({pos,q})")
 
     def publisher(self):
 
@@ -63,11 +63,11 @@ class client_node(Node):
             msg.pose.orientation.z = float(0.0)
             msg.pose.orientation.w = float(1.0)
             self.pubs[cf].publish(msg)
-            if self.pub_count % 10 == 0:
-                self.get_logger().info(
-                    f"Pos cmd for {cf}, (x,y,z) = ({msg.pose.position.x,msg.pose.position.y,msg.pose.position.z})")
+            # if self.pub_count % 10 == 0:
+            #     self.get_logger().info(
+            #         f"Pos cmd for {cf}, (x,y,z) = ({msg.pose.position.x,msg.pose.position.y,msg.pose.position.z})")
         self.pub_count += 1
-        # print(self.pub_count % 10)
+
 
 
 
